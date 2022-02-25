@@ -98,6 +98,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         context = this;
+
+
         counterTxt = findViewById(R.id.counter_id);
         locateMe = findViewById(R.id.mylocation);
         openTraffic = findViewById(R.id.mytraffic);
