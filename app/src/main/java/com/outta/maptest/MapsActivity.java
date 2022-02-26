@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -53,12 +54,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     Context context;
     int counter = 10;
-    TextView counterTxt;
+    TextView counterTxt,addressTxt;
     LocationManager locationManager;
     String provider;
     AlertDialog alert;
     String LAT, LONG, City, MapLat, MapLong;
-    ImageView locateMe, openTraffic, changeMapType,refreshMap;
+    FrameLayout locateMe, openTraffic, changeMapType, refreshMap;
     Location location;
     boolean TRAFFIC_STATUS = false;
     int count = 0;
@@ -105,6 +106,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         openTraffic = findViewById(R.id.mytraffic);
         changeMapType = findViewById(R.id.maptype);
         refreshMap = findViewById(R.id.refresh);
+        addressTxt = findViewById(R.id.address_id);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -149,18 +151,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 if (count == 2) {
                     mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-                   // Toast.makeText(context, "MAP_TYPE_TERRAIN",Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(context, "MAP_TYPE_TERRAIN",Toast.LENGTH_SHORT).show();
 
                 }
                 if (count == 3) {
                     mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                   // Toast.makeText(context, "MAP_TYPE_HYBRID",Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(context, "MAP_TYPE_HYBRID",Toast.LENGTH_SHORT).show();
 
 
                 }
                 if (count == 4) {
                     mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                   // Toast.makeText(context, "MAP_TYPE_NORMAL",Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(context, "MAP_TYPE_NORMAL",Toast.LENGTH_SHORT).show();
 
                     count = 0;
                 }
@@ -197,29 +199,72 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.e("DATAA", response.body().getOfflineFrom());
                 Log.e("Long: ", String.valueOf(response.body().getLongitude()));
                 Log.e("Lat: ", String.valueOf(response.body().getLatitude()));
-                Toast.makeText(context, String.valueOf(response.body().getLatitude()), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(context, String.valueOf(response.body().getLatitude()), Toast.LENGTH_SHORT).show();
 
                 // Add a marker in Sydney and move the camera
                 LatLng sydney = new LatLng(response.body().getLatitude(), response.body().getLongitude());
 
+                mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
+                mMap.setPadding(0, 0, 0, 200);
+                LatLng myCoordinates = new LatLng(response.body().getLatitude(), response.body().getLongitude());
+                List<Address> Myaddresses = getCityName(myCoordinates);
+                Log.e("add", String.valueOf(Myaddresses));
 
-                mMap.addMarker(new MarkerOptions().position(sydney)
-                        .title("KIA")
-                        .icon(BitmapDescriptorFactory.fromBitmap(resizeMapIcons("cars", 150, 150)))
-                        .snippet(
-                                "Status:" + response.body().getSpeed() + "\n" +
-                                        "Time:" + response.body().getUpdateTime() + "\n" +
-                                        "Engine:" + response.body().getEngine() + "\n" +
-                                        "Battery:" + response.body().getBattery()
-                        ));
+                if (!Myaddresses.isEmpty()) {
+
+                    City = Myaddresses.get(0).getAddressLine(0);
+                    addressTxt.setText(String.valueOf(City));
+
+
+                }else{
+                    addressTxt.setVisibility(View.GONE);
+                }
+
+                if (response.body().getStatus() != null) {
+                    if (response.body().getStatus().toLowerCase().equals("static")) {
+                        mMap.addMarker(new MarkerOptions().position(sydney)
+                                .title("KIA")
+                                .icon(BitmapDescriptorFactory.fromBitmap(resizeMapIcons("car_blue", 150, 150)))
+                                .snippet(
+                                        "Status:" + response.body().getStatus() + "\n" +
+                                                "Time:" + response.body().getUpdateTime() + "\n" +
+                                                "Engine:" + response.body().getEngine() + "\n" +
+                                                "Battery:" + response.body().getBattery()
+                                ));
+                    }
+                    if (response.body().getStatus().toLowerCase().equals("moving") || response.body().getStatus().toLowerCase().equals("online")) {
+                        mMap.addMarker(new MarkerOptions().position(sydney)
+                                .title("KIA")
+                                .icon(BitmapDescriptorFactory.fromBitmap(resizeMapIcons("car_green", 150, 150)))
+                                .snippet(
+                                        "Status:" + response.body().getStatus() + "\n" +
+                                                "Time:" + response.body().getUpdateTime() + "\n" +
+                                                "Engine:" + response.body().getEngine() + "\n" +
+                                                "Battery:" + response.body().getBattery()
+                                ));
+                    }
+                    if (response.body().getStatus().toLowerCase().equals("offline")) {
+                        mMap.addMarker(new MarkerOptions().position(sydney)
+                                .title("KIA")
+                                .icon(BitmapDescriptorFactory.fromBitmap(resizeMapIcons("car_gry", 150, 150)))
+                                .snippet(
+                                        "Status:" + response.body().getStatus() + "\n" +
+                                                "Time:" + response.body().getUpdateTime() + "\n" +
+                                                "Engine:" + response.body().getEngine() + "\n" +
+                                                "Battery:" + response.body().getBattery()
+                                ));
+                    }
+
+                }
+
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
 
                 CameraPosition cameraPosition = new CameraPosition.Builder().
                         target(new LatLng(response.body().getLatitude(),
-                                response.body().getLongitude())).zoom(15).build();
+                                response.body().getLongitude())).zoom(10).build();
 
-                mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 mMap.getUiSettings().setZoomControlsEnabled(true);
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
 
@@ -229,9 +274,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onFailure(Call<MapModel> call, Throwable t) {
                 // progressBar.setVisibility(View.GONE);
-                Toast.makeText(context, "There is problem , Try Again later", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "There is problem , please check your connection", Toast.LENGTH_SHORT).show();
                 Log.e("fail", t.getMessage());
-                // Add a marker in Sydney and move the camera
+/*                // Add a marker in Sydney and move the camera
                 LatLng sydney = new LatLng(41.40338, 2.17403);
 
                 mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
@@ -248,7 +293,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 mMap.getUiSettings().setZoomControlsEnabled(true);
-                mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                mMap.getUiSettings().setMyLocationButtonEnabled(false);*/
             }
         });
     }
@@ -380,8 +425,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 LatLng myCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
                 List<Address> Myaddresses = getCityName(myCoordinates);
                 Log.e("add", String.valueOf(Myaddresses));
+
                 if (!Myaddresses.isEmpty()) {
-                    City = Myaddresses.get(0).getAdminArea();
+
+                    City = Myaddresses.get(0).getAddressLine(0);
+                   // addressTxt.setText(String.valueOf(City));
+
+
+                }else{
+                   // addressTxt.setVisibility(View.GONE);
                 }
 //                mMap.setMyLocationEnabled(true);
             } else {
